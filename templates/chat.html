@@ -1,0 +1,125 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <title>Food Safety Chatbot</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.5.4/socket.io.js"></script>
+</head>
+<body>
+    <h1>Food Safety Chatbot</h1>
+
+    <!-- Image Upload Form (Handled via JavaScript) -->
+    <input type="file" id="image-upload" accept="image/*">
+    <button onclick="uploadImage()">Upload</button>
+
+    <h3>Extracted Text:</h3>
+    <p id="extracted-text"></p>
+
+    <h3>Chat:</h3>
+    <div id="chat-box" style="border:1px solid #ccc; height: 300px; overflow-y: scroll; padding: 10px;"></div>
+
+    <!-- Chat Input -->
+    <input type="text" id="user-message" placeholder="Ask a question...">
+    <button onclick="sendMessage()">Send</button>
+
+    <!-- Flask-SocketIO Listener for Dynamic Updates -->
+    <script type="text/javascript">
+        var socket = io.connect("http://127.0.0.1:5000");
+
+        // Function to handle new bot responses
+        socket.on("bot_response", function(data) {
+            var chatBox = document.getElementById("chat-box");
+
+            if (data.extracted_text) {
+                document.getElementById("extracted-text").innerText = "Extracted Text: " + data.extracted_text;
+            }
+
+            if (data.user_message) {
+                var userMsg = document.createElement("p");
+                userMsg.innerHTML = "<strong>You:</strong> " + data.user_message; 
+                chatBox.appendChild(userMsg);
+            }
+
+            var botMsg = document.createElement("p");
+            botMsg.innerHTML = "<strong>Bot:</strong> " + extractGeminiResponse(data.response);
+            botMsg.style.color = "green";
+            chatBox.appendChild(botMsg);
+
+            // Auto-scroll chatbox
+            chatBox.scrollTop = chatBox.scrollHeight;
+        });
+
+        // Function to extract readable text from Gemini API response
+        function extractGeminiResponse(response) {
+            try {
+                if (response && response.candidates && response.candidates.length > 0) {
+                    return response.candidates[0].content.parts[0].text || "I couldn't process the response.";
+                }
+                return "No valid response received.";
+            } catch (error) {
+                console.error("Error extracting Gemini API response:", error);
+                return "Sorry, I couldn't understand the response.";
+            }
+        }
+
+        // Function to send user messages
+        function sendMessage() {
+            var userMessage = document.getElementById("user-message").value;
+            if (userMessage.trim() !== "") {
+                socket.emit("user_message", { message: userMessage });
+                document.getElementById("user-message").value = "";
+            }
+        }
+
+        function uploadImage() {
+    var fileInput = document.getElementById("image-upload");
+
+    if (fileInput.files.length === 0) {
+        alert("Please select an image.");
+        return;
+    }
+
+    var formData = new FormData();
+    formData.append("file", fileInput.files[0]);
+
+    fetch("/upload", {
+        method: "POST",
+        body: formData
+    })
+    .then(response => response.json())  // Ensure JSON parsing
+    .then(data => {
+        console.log("Server Response:", data);  // ✅ Debugging log
+
+        // ✅ Display extracted text
+        if (data.extracted_text) {
+            document.getElementById("extracted-text").innerText = "Extracted Text: " + data.extracted_text;
+        } else {
+            document.getElementById("extracted-text").innerText = "No text extracted.";
+        }
+
+        // ✅ Display Gemini API response in chat
+        var chatBox = document.getElementById("chat-box");
+        
+        if (data.response) {
+            var botMsg = document.createElement("p");
+            botMsg.innerHTML = "<strong>Bot:</strong> " + data.response;
+            botMsg.style.color = "green";
+            chatBox.appendChild(botMsg);
+        } else {
+            var botMsg = document.createElement("p");
+            botMsg.innerHTML = "<strong>Bot:</strong> No valid response received.";
+            botMsg.style.color = "red";
+            chatBox.appendChild(botMsg);
+        }
+
+        // ✅ Auto-scroll chatbox
+        chatBox.scrollTop = chatBox.scrollHeight;
+    })
+    .catch(error => {
+        console.error("Error in upload request:", error);
+        alert("Failed to upload image. Check console for details.");
+    });
+}
+
+    </script>
+</body>
+</html>
