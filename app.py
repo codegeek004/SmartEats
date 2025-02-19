@@ -124,5 +124,37 @@ def extract_entities(text):
 	extracted_ingredients = [entity['word'] for entity in entities if entity['entity'] == 'B-CHEMICAL']
 	return extracted_ingredients
 
+#initialize OAuth
+oauth = OAuth(app)
+
+#create a google oauth client
+google = oauth.register(
+		name = 'google',
+		client_id = "",
+		client_secret = "",
+		server_metadata_url="https://accounts.google.com/.well-known/openid-configuration",
+		client_kwargs={'scope': 'openid profile email',
+                   'redirect_uri': 'http://127.0.0.1:5000/auth'},
+	)
+
+
+google_config_url = "https://accounts.google.com/.well-known/openid-configuration"
+response = requests.get(google_config_url)
+config = response.json()
+
+@app.route('/login')
+def login():
+	redirect_uri = "http://127.0.0.1:5000/auth"
+	return google.authorize_redirect(redirect_uri)
+
+@app.route('/auth')
+def auth():
+	token = google.authorize_access_token()
+	nonce = token.get('nonce')
+	user = google.parse_id_token(token, nonce=nonce)
+	session['user'] = user
+	return redirect(url_for('index'))
+
+
 if __name__ == "__main__":
 	socketio.run(app, debug=True)
