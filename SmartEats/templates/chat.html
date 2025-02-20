@@ -23,7 +23,7 @@
             border-radius: 10px;
             box-shadow: 0px 4px 12px rgba(0, 0, 0, 0.1);
             width: 90%;
-            max-width: 700px; /* Increased max width */
+            max-width: 600px;
             text-align: center;
         }
 
@@ -42,13 +42,10 @@
             background-color: #1E6D43;
         }
 
-        /* Increased camera scanning area */
         video, canvas {
             width: 100%;
-            max-width: 650px; /* Increased max width */
-            height: 400px; /* Increased height */
             border-radius: 8px;
-            border: 3px solid #2E8B57;
+            border: 2px solid #2E8B57;
             display: none;
         }
 
@@ -70,4 +67,112 @@
         <h2>Food Safety Chatbot</h2>
 
         <h3>Select Image Source:</h3>
-        <label><input type="radio
+        <label><input type="radio" name="imageSource" value="upload" checked onchange="toggleUploadMethod()"> Upload from System</label>
+        <label><input type="radio" name="imageSource" value="camera" onchange="toggleUploadMethod()"> Scan through Camera</label>
+
+        <div id="upload-container">
+            <input type="file" id="file" accept="image/*">
+            <button class="btn" onclick="uploadImage()">Upload</button>
+        </div>
+
+        <div id="camera-container" style="display: none;">
+            <video id="video" autoplay></video>
+            <canvas id="canvas"></canvas>
+            <button class="btn" onclick="captureImage()">Capture</button>
+            <button class="btn" onclick="uploadCapturedImage()">Upload</button>
+        </div>
+
+        <h3>Your Questions:</h3>
+        <div class="chat-box" id="question-box"></div>
+
+        <h3>Bot Responses:</h3>
+        <div class="chat-box" id="response-box"></div>
+    </div>
+
+    <script>
+        let video = document.getElementById("video");
+        let canvas = document.getElementById("canvas");
+        let context = canvas.getContext("2d");
+
+        function toggleUploadMethod() {
+            let uploadContainer = document.getElementById("upload-container");
+            let cameraContainer = document.getElementById("camera-container");
+            let selectedOption = document.querySelector('input[name="imageSource"]:checked').value;
+
+            if (selectedOption === "upload") {
+                uploadContainer.style.display = "block";
+                cameraContainer.style.display = "none";
+                stopCamera();
+            } else {
+                uploadContainer.style.display = "none";
+                cameraContainer.style.display = "block";
+                startCamera();
+            }
+        }
+
+        function startCamera() {
+            navigator.mediaDevices.getUserMedia({ video: true })
+                .then((stream) => {
+                    video.style.display = "block";
+                    video.srcObject = stream;
+                })
+                .catch((err) => {
+                    alert("Camera access denied: " + err.message);
+                });
+        }
+
+        function stopCamera() {
+            if (video.srcObject) {
+                video.srcObject.getTracks().forEach(track => track.stop());
+                video.srcObject = null;
+            }
+            video.style.display = "none";
+        }
+
+        function captureImage() {
+            canvas.width = video.videoWidth;
+            canvas.height = video.videoHeight;
+            context.drawImage(video, 0, 0, canvas.width, canvas.height);
+            canvas.style.display = "block";
+        }
+
+        function uploadCapturedImage() {
+            canvas.toBlob((blob) => {
+                let formData = new FormData();
+                formData.append("image", blob, "captured_image.jpg");
+
+                fetch("/upload", { method: "POST", body: formData })
+                    .then(response => response.json())
+                    .then(data => {
+                        document.getElementById("question-box").innerText = data.extracted_text;
+                        document.getElementById("response-box").innerText = data.response;
+                    })
+                    .catch(error => alert("Upload failed: " + error));
+            }, "image/jpeg");
+        }
+
+        function uploadImage() {
+            let fileInput = document.getElementById("file");
+            if (!fileInput.files.length) {
+                alert("Please select a file first.");
+                return;
+            }
+
+            let formData = new FormData();
+            formData.append("image", fileInput.files[0]);
+
+            fetch("/upload", {
+                method: "POST",
+                body: formData
+            })
+            .then(response => response.json())
+            .then(data => {
+                document.getElementById("question-box").innerText = data.extracted_text;
+                document.getElementById("response-box").innerText = data.response;
+            })
+            .catch(error => alert("Upload failed: " + error));
+        }
+    </script>
+
+</body>
+</html>
