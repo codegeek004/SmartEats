@@ -1,125 +1,225 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Food Safety Chatbot</title>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.5.4/socket.io.js"></script>
+    <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}">
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700&display=swap');
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600&display=swap');
+
+        body {
+            background: url("{{ url_for('static', filename='photo.jpg') }}") no-repeat center center/cover;
+            font-family: 'Inter', sans-serif;
+            color: #2F4F4F;
+            margin: 0;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+        }
+
+        header {
+            background: rgba(255, 255, 255, 0.9);
+            padding: 1rem;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+        }
+
+        nav {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+
+        .nav-buttons {
+            display: flex;
+            gap: 1rem;
+        }
+
+        .main-container {
+            flex: 1;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 2rem;
+        }
+
+        .container {
+            max-width: 700px;
+            background: rgba(255, 255, 255, 0.8);
+            padding: 30px;
+            border-radius: 12px;
+            box-shadow: 0px 4px 12px rgba(0, 0, 0, 0.1);
+            width: 90%;
+        }
+
+        .btn {
+            background-color: #2E8B57;
+            color: white;
+            border: none;
+            padding: 12px 18px;
+            cursor: pointer;
+            border-radius: 6px;
+            font-size: 16px;
+            font-weight: bold;
+            transition: background 0.3s;
+        }
+
+        .btn:hover {
+            background-color: #1E6D43;
+        }
+
+        .chat-container {
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+            align-items: center;
+            margin-top: 20px;
+            width: 100%;
+        }
+
+        .chat-section {
+            width: 100%;
+            max-width: 600px;
+        }
+
+        .chat-box {
+            border: 2px solid #2E8B57;
+            background: #F5FFF5;
+            padding: 15px;
+            border-radius: 10px;
+            font-size: 16px;
+            max-height: 300px;
+            overflow-y: auto;
+            word-wrap: break-word;
+        }
+
+        .message {
+            background: white;
+            padding: 8px;
+            margin: 5px 0;
+            border-radius: 6px;
+            font-size: 15px;
+            line-height: 1.4;
+            width: fit-content;
+            max-width: 100%;
+        }
+
+        .user-message {
+            text-align: right;
+            background: #E0F7FA;
+        }
+
+        .bot-message {
+            text-align: left;
+            background: #DCF8C6;
+        }
+
+        .chat-input {
+            display: flex;
+            gap: 10px;
+            margin-top: 15px;
+            width: 100%;
+            justify-content: center;
+        }
+
+        .chat-input input {
+            flex: 1;
+            padding: 12px;
+            border: 2px solid #2E8B57;
+            border-radius: 6px;
+            font-size: 16px;
+        }
+
+        footer {
+            background: rgba(46, 139, 87, 0.9);
+            color: white;
+            text-align: center;
+            padding: 1rem;
+            margin-top: auto;
+        }
+
+    </style>
 </head>
 <body>
-    <h1>Food Safety Chatbot</h1>
+    <header>
+        <nav>
+            <h1>Food Safety Chatbot</h1>
+            <div class="nav-buttons">
+                {% if session.get('user') %}
+                    <form action="{{ url_for('logout') }}" method="post">
+                        <button type="submit" class="btn">Logout</button>
+                    </form>
+                {% else %}
+                    <form action="{{ url_for('login') }}" method="get">
+                        <button type="submit" class="btn">Login</button>
+                    </form>
+                {% endif %}
+            </div>
+        </nav>
+    </header>
 
-    <!-- Image Upload Form (Handled via JavaScript) -->
-    <input type="file" id="image-upload" accept="image/*">
-    <button onclick="uploadImage()">Upload</button>
+    <div class="main-container">
+        <div class="container">
+            {% if session.get('user') %}
+                <div class="upload-section">
+                    <input type="file" name="image" id="file" accept="image/*">
+                    <button class="btn" onclick="uploadImage()">Upload</button>
+                </div>
 
-    <h3>Extracted Text:</h3>
-    <p id="extracted-text"></p>
+                <div class="chat-container">
+                    <div class="chat-section">
+                        <h3>Your Questions:</h3>
+                        <div id="question-box" class="chat-box"></div>
+                    </div>
+                    <div class="chat-section">
+                        <h3>Bot Responses:</h3>
+                        <div id="response-box" class="chat-box"></div>
+                    </div>
+                </div>
 
-    <h3>Chat:</h3>
-    <div id="chat-box" style="border:1px solid #ccc; height: 300px; overflow-y: scroll; padding: 10px;"></div>
+                <div class="chat-input">
+                    <input type="text" id="user-message" placeholder="Ask a question...">
+                    <button class="btn" onclick="sendMessage()">Send</button>
+                </div>
+            {% else %}
+                <p>Please login to access the chatbot.</p> 
+            {% endif %}
+        </div>
+    </div>
 
-    <!-- Chat Input -->
-    <input type="text" id="user-message" placeholder="Ask a question...">
-    <button onclick="sendMessage()">Send</button>
+    <footer>
+        <p>&copy; 2023 Food Safety Chatbot. All rights reserved.</p>
+    </footer>
 
-    <!-- Flask-SocketIO Listener for Dynamic Updates -->
-    <script type="text/javascript">
-        var socket = io.connect("http://127.0.0.1:5000");
+    <script>
+    function uploadImage() {
+        let fileInput = document.getElementById("file");
+        let formData = new FormData();
+        formData.append("image", fileInput.files[0]);
 
-        // Function to handle new bot responses
-        socket.on("bot_response", function(data) {
-            var chatBox = document.getElementById("chat-box");
-
-            if (data.extracted_text) {
-                document.getElementById("extracted-text").innerText = "Extracted Text: " + data.extracted_text;
+        fetch("/upload", {
+            method: "POST",
+            body: formData
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.error) {
+                alert("Error: " + data.error);
+                return;
             }
 
-            if (data.user_message) {
-                var userMsg = document.createElement("p");
-                userMsg.innerHTML = "<strong>You:</strong> " + data.user_message; 
-                chatBox.appendChild(userMsg);
-            }
+            // Update the question box with extracted text
+            document.getElementById("question-box").innerText = data.extracted_text;
 
-            var botMsg = document.createElement("p");
-            botMsg.innerHTML = "<strong>Bot:</strong> " + extractGeminiResponse(data.response);
-            botMsg.style.color = "green";
-            chatBox.appendChild(botMsg);
-
-            // Auto-scroll chatbox
-            chatBox.scrollTop = chatBox.scrollHeight;
-        });
-
-        // Function to extract readable text from Gemini API response
-        function extractGeminiResponse(response) {
-            try {
-                if (response && response.candidates && response.candidates.length > 0) {
-                    return response.candidates[0].content.parts[0].text || "I couldn't process the response.";
-                }
-                return "No valid response received.";
-            } catch (error) {
-                console.error("Error extracting Gemini API response:", error);
-                return "Sorry, I couldn't understand the response.";
-            }
-        }
-
-        // Function to send user messages
-        function sendMessage() {
-            var userMessage = document.getElementById("user-message").value;
-            if (userMessage.trim() !== "") {
-                socket.emit("user_message", { message: userMessage });
-                document.getElementById("user-message").value = "";
-            }
-        }
-
-        function uploadImage() {
-    var fileInput = document.getElementById("image-upload");
-
-    if (fileInput.files.length === 0) {
-        alert("Please select an image.");
-        return;
+            // Update the response box with bot response
+            document.getElementById("response-box").innerText = data.response;
+        })
+        .catch(error => console.error("Upload failed:", error));
     }
-
-    var formData = new FormData();
-    formData.append("file", fileInput.files[0]);
-
-    fetch("/upload", {
-        method: "POST",
-        body: formData
-    })
-    .then(response => response.json())  // Ensure JSON parsing
-    .then(data => {
-        console.log("Server Response:", data);  // ✅ Debugging log
-
-        // ✅ Display extracted text
-        if (data.extracted_text) {
-            document.getElementById("extracted-text").innerText = "Extracted Text: " + data.extracted_text;
-        } else {
-            document.getElementById("extracted-text").innerText = "No text extracted.";
-        }
-
-        // ✅ Display Gemini API response in chat
-        var chatBox = document.getElementById("chat-box");
-        
-        if (data.response) {
-            var botMsg = document.createElement("p");
-            botMsg.innerHTML = "<strong>Bot:</strong> " + data.response;
-            botMsg.style.color = "green";
-            chatBox.appendChild(botMsg);
-        } else {
-            var botMsg = document.createElement("p");
-            botMsg.innerHTML = "<strong>Bot:</strong> No valid response received.";
-            botMsg.style.color = "red";
-            chatBox.appendChild(botMsg);
-        }
-
-        // ✅ Auto-scroll chatbox
-        chatBox.scrollTop = chatBox.scrollHeight;
-    })
-    .catch(error => {
-        console.error("Error in upload request:", error);
-        alert("Failed to upload image. Check console for details.");
-    });
-}
-
     </script>
+
 </body>
 </html>
