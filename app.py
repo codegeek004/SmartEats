@@ -10,6 +10,7 @@ import pytesseract
 from transformers import pipeline
 import requests
 import json
+from authlib.integrations.flask_client import OAuth
 
 
 app = Flask(__name__)
@@ -34,34 +35,33 @@ def index():
 
 @app.route('/upload', methods=['POST'])
 def upload():
-	print('inside upload')
-	file = request.files['file']
-	
-	extracted_text = extract_text(file) 
-	
-	prompt_text = f"Given the following ingredients, is this product safe for a diabetic person?\n\n{extracted_text}"
+    try:
+        file = request.files.get("image")
+        if not file:
+            return jsonify({"error": "No image uploaded"}), 400
 
-	url = "https://generativelanguage.googleapis.com/v1/models/gemini-1.5-flash:generateContent?key=AIzaSyAEmTn2fafIXkteY2JdF811EMTcG01GZGI"
-	headers = {"Content-Type": "application/json"}
-	payload = {
-		"contents": [{"parts": [{"text": prompt_text}]}]
-	}
-	
-	response = requests.post(url, json=payload, headers=headers)
-	print(response)
-	print(response.text)
-	if response.status_code == 200:
-		response_data = response.json()
-		print("api response", response_data)
-		
-		if response_data.get('candidates'):
-			bot_response = response_data['candidates'][0]['content']['parts'][0]['text']
-		else:
-			bot_response = "Sorry, no valid response received from the API."
-	else:
-		bot_response = "Error calling the Gemini API."
-	
-	return jsonify({'extracted_text': extracted_text, 'response': bot_response})
+        extracted_text = extract_text(file.stream)  
+
+        prompt_text = f"Given the following ingredients, is this product safe for a diabetic person?\n\n{extracted_text}"
+
+        url = "https://generativelanguage.googleapis.com/v1/models/gemini-1.5-flash:generateContent?key=AIzaSyAEmTn2fafIXkteY2JdF811EMTcG01GZGI"
+        headers = {"Content-Type": "application/json"}
+        payload = {"contents": [{"parts": [{"text": prompt_text}]}]}
+
+        response = requests.post(url, json=payload, headers=headers)
+
+        if response.status_code != 200:
+            return jsonify({"error": f"API Error: {response.text}"}), 500
+
+        response_data = response.json()
+        bot_response = response_data.get("candidates", [{}])[0].get("content", {}).get("parts", [{}])[0].get("text", "No valid response.")
+        print('response', bot_response)
+
+        return jsonify({'extracted_text': extracted_text, 'response': bot_response})
+
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
 
 @socketio.on("user_message")
 def handle_message(data):
@@ -154,6 +154,10 @@ def auth():
 	user = google.parse_id_token(token, nonce=nonce)
 	session['user'] = user
 	return redirect(url_for('index'))
+@app.route('/logout')
+def logout():
+	session.clear()
+	return render_template('chat.html')
 
 
 if __name__ == "__main__":
