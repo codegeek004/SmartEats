@@ -1,6 +1,6 @@
 import os
 import google.generativeai as genai
-from flask import Flask, render_template, request, jsonify, session
+from flask import Flask, render_template, request, jsonify, session, redirect, url_for, flash
 from flask_socketio import SocketIO
 from flask_wtf import FlaskForm
 from wtforms import StringField, SubmitField
@@ -30,10 +30,10 @@ class ChatForm(FlaskForm):
 
 @app.route("/")
 def home():
-    return jsonify({"message": "Flask is running on Vercel!"})
+	return render_template('index.html') 
 
 def handler(event, context):
-    return app(event, context)
+	return app(event, context)
 
 @app.route("/chat")
 def chat():
@@ -42,32 +42,32 @@ def chat():
 
 @app.route('/upload', methods=['POST'])
 def upload():
-    try:
-        file = request.files.get("image")
-        if not file:
-            return jsonify({"error": "No image uploaded"}), 400
+	try:
+		file = request.files.get("image")
+		if not file:
+			return jsonify({"error": "No image uploaded"}), 400
 
-        extracted_text = extract_text(file.stream)  
+		extracted_text = extract_text(file.stream)  
 
-        prompt_text = f"Given the following ingredients, is this product safe for a diabetic person?\n\n{extracted_text}"
+		prompt_text = f"Given the following ingredients, is this product safe for a diabetic person?\n\n{extracted_text}"
 
-        url = "https://generativelanguage.googleapis.com/v1/models/gemini-1.5-flash:generateContent?key=AIzaSyAEmTn2fafIXkteY2JdF811EMTcG01GZGI"
-        headers = {"Content-Type": "application/json"}
-        payload = {"contents": [{"parts": [{"text": prompt_text}]}]}
+		url = "https://generativelanguage.googleapis.com/v1/models/gemini-1.5-flash:generateContent?key=AIzaSyAEmTn2fafIXkteY2JdF811EMTcG01GZGI"
+		headers = {"Content-Type": "application/json"}
+		payload = {"contents": [{"parts": [{"text": prompt_text}]}]}
 
-        response = requests.post(url, json=payload, headers=headers)
+		response = requests.post(url, json=payload, headers=headers)
 
-        if response.status_code != 200:
-            return jsonify({"error": f"API Error: {response.text}"}), 500
+		if response.status_code != 200:
+			return jsonify({"error": f"API Error: {response.text}"}), 500
 
-        response_data = response.json()
-        bot_response = response_data.get("candidates", [{}])[0].get("content", {}).get("parts", [{}])[0].get("text", "No valid response.")
-        print('response', bot_response)
+		response_data = response.json()
+		bot_response = response_data.get("candidates", [{}])[0].get("content", {}).get("parts", [{}])[0].get("text", "No valid response.")
+		print('response', bot_response)
 
-        return jsonify({'extracted_text': extracted_text, 'response': bot_response})
+		return jsonify({'extracted_text': extracted_text, 'response': bot_response})
 
-    except Exception as e:
-        return jsonify({"error": str(e)}), 500
+	except Exception as e:
+		return jsonify({"error": str(e)}), 500
 
 
 @socketio.on("user_message")
@@ -137,11 +137,11 @@ oauth = OAuth(app)
 #create a google oauth client
 google = oauth.register(
 		name = 'google',
-		client_id = "",
-		client_secret = "",
+		client_id = "227166183194-iaqdd7cu5fnb3rhf3d0shdjnftnfh9l3.apps.googleusercontent.com",
+		client_secret = "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",
 		server_metadata_url="https://accounts.google.com/.well-known/openid-configuration",
 		client_kwargs={'scope': 'openid profile email',
-                   'redirect_uri': 'http://127.0.0.1:5000/auth'},
+				   'redirect_uri': 'http://127.0.0.1:5000/auth'},
 	)
 
 
@@ -164,8 +164,8 @@ def auth():
 @app.route('/logout')
 def logout():
 	session.clear()
-	return render_template('chat.html')
-
+	flash('Logged out successfully', 'success')
+	return render_template('index.html')
 
 if __name__ == "__main__":
 	app.run(debug=True)
