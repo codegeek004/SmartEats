@@ -1,0 +1,59 @@
+<header>
+    <div class="header-container">
+        <h1>Food Safety Chatbot</h1>
+        <nav>
+            <a href="/">Home</a>
+            <a href="/chat">Chat</a>
+            
+            {% if session['user'] %}
+                <a href="/logout">Logout</a>
+            {% else %}
+                <a href="/login">Login</a>
+            {% endif %}
+        </nav>
+    </div>
+</header>
+
+<style>
+    header {
+        background-color: #2E8B57;
+        color: white;
+        padding: 15px;
+        text-align: center;
+        width: 100%;
+        position: fixed;
+        top: 0;
+        left: 0;
+        z-index: 1000;
+    }
+
+    .header-container {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        max-width: 900px;
+        margin: 0 auto;
+    }
+
+    h1 {
+        font-size: 22px;
+        margin: 0;
+    }
+
+    nav {
+        display: flex;
+        gap: 20px;
+    }
+
+    nav a {
+        color: white;
+        text-decoration: none;
+        font-size: 16px;
+        font-weight: bold;
+    }
+
+    nav a:hover {
+        text-decoration: underline;
+    }
+</style>
+
