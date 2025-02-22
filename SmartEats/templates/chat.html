@@ -62,9 +62,14 @@
     </style>
 </head>
 <body>
-
+    {% include 'header.html' %}
+    <div class="flash message">
+        {% for msg in get_flashed_messages() %}
+            <div class="alert alert-danger">{{ msg }}</div>
+        {% endfor %}
+</div>
     <div class="container">
-        <h2>Food Safety Chatbot</h2>
+        <h2>SmartEats</h2>
 
         <h3>Select Image Source:</h3>
         <label><input type="radio" name="imageSource" value="upload" checked onchange="toggleUploadMethod()"> Upload from System</label>
@@ -173,6 +178,6 @@
             .catch(error => alert("Upload failed: " + error));
         }
     </script>
-
+{% include 'footer.html' %}
 </body>
 </html>
