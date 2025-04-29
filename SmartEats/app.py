@@ -51,7 +51,7 @@ def upload():
 
 		prompt_text = f"Given the following ingredients, is this product safe for a diabetic person?\n\n{extracted_text}"
 
-		url = "https://generativelanguage.googleapis.com/v1/models/gemini-1.5-flash:generateContent?key=AIzaSyAEmTn2fafIXkteY2JdF811EMTcG01GZGI"
+		url = "https://generativelanguage.googleapis.com/v1/models/gemini-1.5-flash:generateContent?key=your_api_key"
 		headers = {"Content-Type": "application/json"}
 		payload = {"contents": [{"parts": [{"text": prompt_text}]}]}
 
@@ -98,7 +98,7 @@ def extract_text(image_path):
 def check_product_safety(text):
 	print('inside check_product_safety')
 	api_url = "https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent"
-	api_key = "AIzaSyAEmTn2fafIXkteY2JdF811EMTcG01GZGI"
+	api_key = "your_api_key"
 
 	headers = {"Content-Type": "application/json"}
 	payload = {
@@ -137,8 +137,8 @@ oauth = OAuth(app)
 #create a google oauth client
 google = oauth.register(
 		name = 'google',
-		client_id = "227166183194-iaqdd7cu5fnb3rhf3d0shdjnftnfh9l3.apps.googleusercontent.com",
-		client_secret = "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",
+		client_id = "your_client_id",
+		client_secret = "your_client_secret",
 		server_metadata_url="https://accounts.google.com/.well-known/openid-configuration",
 		client_kwargs={'scope': 'openid profile email',
 				   'redirect_uri': 'http://127.0.0.1:5000/auth'},
